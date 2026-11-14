@@ -3,6 +3,31 @@
     <string name="app_name">الواجهة الرئيسية</string>
     <string name="settings">الإعدادات</string>
     <string name="inputs">المصادر</string>
-    <string name="press_ok_to_open">اضغط OK للفتح</string>
+    <string name="all_apps">كل التطبيقات</string>
+    <string name="press_ok_to_open">اضغط OK للفتح، واضغط مطولاً للتعديل</string>
     <string name="no_favorites">لا توجد تطبيقات مفضلة بعد</string>
+
+    <!-- وضع التعديل -->
+    <string name="edit_hint">اضغط OK للتحريك أو الإزالة · رجوع لإنهاء التعديل</string>
+    <string name="move_hint">حرّكه بالأسهم · اضغط OK لتثبيته</string>
+    <string name="add_app">إضافة تطبيق</string>
+    <string name="done">تم</string>
+    <string name="move">تحريك</string>
+    <string name="remove_favorite">إزالة من المفضلة</string>
+    <string name="cancel">إلغاء</string>
+
+    <!-- كل التطبيقات -->
+    <string name="all_apps_hint">اضغط OK للفتح · اضغط مطولاً للخيارات</string>
+    <string name="add_favorite">إضافة إلى المفضلة</string>
+    <string name="hide_app">إخفاء التطبيق</string>
+    <string name="unhide_app">إظهار التطبيق</string>
+    <string name="show_hidden">عرض المخفية (%1$d)</string>
+    <string name="hide_hidden">إخفاء المخفية</string>
+    <string name="hidden_badge">مخفي</string>
+    <string name="no_apps">لا توجد تطبيقات</string>
+
+    <!-- إضافة تطبيق للمفضلة -->
+    <string name="add_title">إضافة إلى المفضلة</string>
+    <string name="add_hint">اضغط OK للإضافة · المفضلة %1$d من %2$d</string>
+    <string name="no_apps_to_add">لا توجد تطبيقات أخرى للإضافة</string>
 </resources>

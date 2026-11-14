@@ -13,16 +13,31 @@ import android.provider.Settings
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import java.text.Collator
+import java.util.concurrent.ConcurrentHashMap
 
-/** An app that can be opened from the launcher. */
+/** An app that can be opened from the launcher. [updateTime] changes when the app is updated. */
 class LaunchableApp(
     val packageName: String,
     val label: String,
     val activity: ActivityInfo,
+    val updateTime: Long,
 )
 
 /** Pictures for a tile: the TV banner when the app has one, otherwise its icon. */
 class Artwork(val banner: ImageBitmap?, val icon: ImageBitmap?)
+
+/** Keeps loaded pictures in memory per app version, so no screen loads the same picture twice. */
+class ArtCache(private val context: Context) {
+    private val cache = ConcurrentHashMap<String, Artwork>()
+
+    fun peek(app: LaunchableApp): Artwork? = cache[key(app)]
+
+    /** Returns the pictures, loading them if needed. Call it off the main thread. */
+    fun load(app: LaunchableApp): Artwork =
+        cache.getOrPut(key(app)) { AppRepository.loadArtwork(context, app) }
+
+    private fun key(app: LaunchableApp) = app.packageName + ":" + app.updateTime
+}
 
 object AppRepository {
 
@@ -45,7 +60,12 @@ object AppRepository {
                 val pkg = activity.packageName
                 if (pkg == self || byPackage.containsKey(pkg)) continue
                 val label = info.loadLabel(pm)?.toString().orEmpty().ifBlank { pkg }
-                byPackage[pkg] = LaunchableApp(pkg, label, activity)
+                val updated = try {
+                    pm.getPackageInfo(pkg, 0).lastUpdateTime
+                } catch (e: PackageManager.NameNotFoundException) {
+                    0L
+                }
+                byPackage[pkg] = LaunchableApp(pkg, label, activity, updated)
             }
         }
         val collator = Collator.getInstance()
@@ -62,13 +82,6 @@ object AppRepository {
             null
         }
         return Artwork(banner, icon)
-    }
-
-    /** Changes when the app is updated, so cached pictures are refreshed. */
-    fun lastUpdateTime(context: Context, packageName: String): Long = try {
-        context.packageManager.getPackageInfo(packageName, 0).lastUpdateTime
-    } catch (e: PackageManager.NameNotFoundException) {
-        0L
     }
 
     fun launch(context: Context, packageName: String): Boolean {

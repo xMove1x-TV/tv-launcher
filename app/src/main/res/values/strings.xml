@@ -3,6 +3,31 @@
     <string name="app_name">TV Launcher</string>
     <string name="settings">Settings</string>
     <string name="inputs">Inputs</string>
-    <string name="press_ok_to_open">Press OK to open</string>
+    <string name="all_apps">All apps</string>
+    <string name="press_ok_to_open">Press OK to open, hold OK to edit</string>
     <string name="no_favorites">No favorite apps yet</string>
+
+    <!-- Edit mode -->
+    <string name="edit_hint">Press OK to move or remove · Back to finish</string>
+    <string name="move_hint">Move it with the arrows · OK to place it</string>
+    <string name="add_app">Add app</string>
+    <string name="done">Done</string>
+    <string name="move">Move</string>
+    <string name="remove_favorite">Remove from favorites</string>
+    <string name="cancel">Cancel</string>
+
+    <!-- All apps -->
+    <string name="all_apps_hint">OK to open · hold OK for options</string>
+    <string name="add_favorite">Add to favorites</string>
+    <string name="hide_app">Hide app</string>
+    <string name="unhide_app">Show app again</string>
+    <string name="show_hidden">Show hidden (%1$d)</string>
+    <string name="hide_hidden">Hide hidden apps</string>
+    <string name="hidden_badge">Hidden</string>
+    <string name="no_apps">No apps</string>
+
+    <!-- Adding a favorite -->
+    <string name="add_title">Add to favorites</string>
+    <string name="add_hint">OK to add · %1$d of %2$d favorites</string>
+    <string name="no_apps_to_add">No more apps to add</string>
 </resources>
