@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">الواجهة الرئيسية</string>
+    <string name="settings">الإعدادات</string>
+    <string name="inputs">المصادر</string>
+    <string name="press_ok_to_open">اضغط OK للفتح</string>
+    <string name="no_favorites">لا توجد تطبيقات مفضلة بعد</string>
+</resources>

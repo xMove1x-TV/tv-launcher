@@ -1,0 +1,15 @@
+.gradle/
+build/
+local.properties
+*.iml
+.idea/
+captures/
+.kotlin/
+*.apk
+*.aab
+# Signing keys never go in the repo (the private key is a GitHub secret).
+*.pk8
+*.jks
+*.keystore
+*.p12
+SIGNING_KEY*

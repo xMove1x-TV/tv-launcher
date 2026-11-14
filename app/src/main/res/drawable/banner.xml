@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- TV apps-list banner (320x180): a big card above a row of tiles, the middle one "focused". -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="320dp"
+    android:height="180dp"
+    android:viewportWidth="320"
+    android:viewportHeight="180">
+    <path android:pathData="M0,0h320v180h-320z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:endColor="#FF0E141D"
+                android:endX="320"
+                android:endY="180"
+                android:startColor="#FF2C3E57"
+                android:startX="0"
+                android:startY="0"
+                android:type="linear" />
+        </aapt:attr>
+    </path>
+    <path
+        android:fillColor="#33FFFFFF"
+        android:pathData="M76,40h168a10,10 0 0 1 10,10v38a10,10 0 0 1 -10,10h-168a10,10 0 0 1 -10,-10v-38a10,10 0 0 1 10,-10z" />
+    <path
+        android:fillColor="#66FFFFFF"
+        android:pathData="M74,110h40a8,8 0 0 1 8,8v18a8,8 0 0 1 -8,8h-40a8,8 0 0 1 -8,-8v-18a8,8 0 0 1 8,-8z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M138,104h44a10,10 0 0 1 10,10v24a10,10 0 0 1 -10,10h-44a10,10 0 0 1 -10,-10v-24a10,10 0 0 1 10,-10z" />
+    <path
+        android:fillColor="#66FFFFFF"
+        android:pathData="M206,110h40a8,8 0 0 1 8,8v18a8,8 0 0 1 -8,8h-40a8,8 0 0 1 -8,-8v-18a8,8 0 0 1 8,-8z" />
+</vector>

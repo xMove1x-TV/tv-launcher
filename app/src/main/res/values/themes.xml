@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Platform theme: no AppCompat or Material Components libraries needed. Dark window avoids a white flash. -->
+    <style name="Theme.Launcher" parent="@android:style/Theme.Material.NoActionBar.Fullscreen">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:colorBackground">@color/window_background</item>
+        <item name="android:windowContentOverlay">@null</item>
+    </style>
+</resources>
