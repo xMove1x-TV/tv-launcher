@@ -1,5 +1,6 @@
 package dev.tvlauncher.home
 
+import android.util.Log
 import android.view.KeyEvent as NativeKeyEvent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.LinearEasing
@@ -34,6 +35,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -56,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 
+private const val TAG = "TvLauncher"
 private val TileGap = 24.dp
 private val MaxTileWidth = 196.dp
 
@@ -300,12 +303,32 @@ private fun FavoriteGrid(
     } else {
         null
     }
+    // Read at key-press time, so the move always uses the current order and the current moving tile.
+    val currentFavorites by rememberUpdatedState(favorites)
+    val currentMoving by rememberUpdatedState(moving)
+    val currentOnMoveTo by rememberUpdatedState(onMoveTo)
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val available = maxWidth - ScreenPadding * 2
         val tileWidth = ((available - TileGap * (perRow - 1)) / perRow).coerceAtMost(MaxTileWidth)
         val tileHeight = tileWidth * 9f / 16f
         FlowRow(
-            modifier = Modifier.padding(horizontal = ScreenPadding, vertical = 12.dp),
+            modifier = Modifier
+                .padding(horizontal = ScreenPadding, vertical = 12.dp)
+                // While a tile is being moved, the arrows move it instead of the focus.
+                .onPreviewKeyEvent { event ->
+                    val movingPkg = currentMoving ?: return@onPreviewKeyEvent false
+                    val list = currentFavorites
+                    val index = list.indexOfFirst { it.packageName == movingPkg }
+                    if (index < 0) return@onPreviewKeyEvent false
+                    val native = event.nativeKeyEvent
+                    val target = moveTarget(native.keyCode, index, list.size, perRow, rtl)
+                        ?: return@onPreviewKeyEvent false
+                    if (native.action == NativeKeyEvent.ACTION_DOWN) {
+                        Log.d(TAG, "move key=${native.keyCode} index=$index target=$target rtl=$rtl")
+                        if (target != index) currentOnMoveTo(movingPkg, target)
+                    }
+                    true
+                },
             horizontalArrangement = Arrangement.spacedBy(TileGap),
             verticalArrangement = Arrangement.spacedBy(28.dp),
             maxItemsInEachRow = perRow,
@@ -327,16 +350,6 @@ private fun FavoriteGrid(
                             .focusRequester(requesterFor(pkg))
                             .graphicsLayer {
                                 rotationZ = if (jiggle != null && !isMoving) jiggle.value * direction else 0f
-                            }
-                            .onPreviewKeyEvent { event ->
-                                if (!isMoving) return@onPreviewKeyEvent false
-                                val native = event.nativeKeyEvent
-                                val target = moveTarget(native.keyCode, index, count, perRow, rtl)
-                                    ?: return@onPreviewKeyEvent false
-                                if (native.action == NativeKeyEvent.ACTION_DOWN && target != index) {
-                                    onMoveTo(pkg, target)
-                                }
-                                true // arrows move the tile instead of the focus
                             },
                     )
                 }

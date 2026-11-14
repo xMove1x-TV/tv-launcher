@@ -1,5 +1,6 @@
 package dev.tvlauncher.home
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -141,6 +142,7 @@ private fun Launcher(refreshTick: Int) {
                     list.add(target.coerceIn(0, list.size), pkg)
                     favorites = list // saved when the tile is dropped
                 }
+                Log.d("TvLauncher", "moved $pkg to $target, now at ${favorites.indexOf(pkg)}")
             },
             onAllApps = { screen = Screen.AllApps },
             onAddApp = { screen = Screen.AddFavorite },
