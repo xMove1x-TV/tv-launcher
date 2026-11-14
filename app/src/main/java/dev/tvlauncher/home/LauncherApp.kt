@@ -239,6 +239,7 @@ private fun Launcher(refreshTick: Int) {
                     val next = hidden - pkg
                     hidden = next
                     store.saveHidden(next)
+                    if (next.isEmpty()) showHidden = false // the toggle disappears, so start fresh next time
                     menu = null
                 }
             } else {

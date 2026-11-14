@@ -15,8 +15,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -270,10 +268,9 @@ private fun HeroContent(app: LaunchableApp, art: Artwork?, hint: String) {
 }
 
 /**
- * The favorite tiles, sized so a row never needs scrolling. All tiles live in one FlowRow, so a tile
- * keeps its focus while it moves, even into the other row.
+ * The favorite tiles in one or two plain rows, sized so a row never needs scrolling.
+ * (FlowRow was tried first, but on the TV it did not redraw the tiles in their new order while moving.)
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun FavoriteGrid(
     favorites: List<LaunchableApp>,
@@ -311,7 +308,7 @@ private fun FavoriteGrid(
         val available = maxWidth - ScreenPadding * 2
         val tileWidth = ((available - TileGap * (perRow - 1)) / perRow).coerceAtMost(MaxTileWidth)
         val tileHeight = tileWidth * 9f / 16f
-        FlowRow(
+        Column(
             modifier = Modifier
                 .padding(horizontal = ScreenPadding, vertical = 12.dp)
                 // While a tile is being moved, the arrows move it instead of the focus.
@@ -329,29 +326,33 @@ private fun FavoriteGrid(
                     }
                     true
                 },
-            horizontalArrangement = Arrangement.spacedBy(TileGap),
             verticalArrangement = Arrangement.spacedBy(28.dp),
-            maxItemsInEachRow = perRow,
         ) {
-            favorites.forEachIndexed { index, app ->
-                key(app.packageName) {
-                    val pkg = app.packageName
-                    val isMoving = pkg == moving
-                    val direction = if (index % 2 == 0) 1f else -1f
-                    AppTile(
-                        app = app,
-                        art = rememberArtwork(app, artCache),
-                        onClick = { onTileClick(pkg) },
-                        onLongClick = { onTileLongClick(pkg) },
-                        highlight = isMoving,
-                        onFocused = { onFocused(pkg) },
-                        modifier = Modifier
-                            .size(tileWidth, tileHeight)
-                            .focusRequester(requesterFor(pkg))
-                            .graphicsLayer {
-                                rotationZ = if (jiggle != null && !isMoving) jiggle.value * direction else 0f
-                            },
-                    )
+            favorites.chunked(perRow).forEachIndexed { rowIndex, row ->
+                key(rowIndex) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(TileGap)) {
+                        row.forEachIndexed { column, app ->
+                            key(app.packageName) {
+                                val pkg = app.packageName
+                                val isMoving = pkg == moving
+                                val direction = if ((rowIndex * perRow + column) % 2 == 0) 1f else -1f
+                                AppTile(
+                                    app = app,
+                                    art = rememberArtwork(app, artCache),
+                                    onClick = { onTileClick(pkg) },
+                                    onLongClick = { onTileLongClick(pkg) },
+                                    highlight = isMoving,
+                                    onFocused = { onFocused(pkg) },
+                                    modifier = Modifier
+                                        .size(tileWidth, tileHeight)
+                                        .focusRequester(requesterFor(pkg))
+                                        .graphicsLayer {
+                                            rotationZ = if (jiggle != null && !isMoving) jiggle.value * direction else 0f
+                                        },
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
