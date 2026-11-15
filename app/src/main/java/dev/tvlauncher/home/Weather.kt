@@ -57,7 +57,11 @@ data class WeatherScene(val sky: Sky, val part: DayPart) {
 object WeatherService {
     private const val REFRESH_MS = 30 * 60_000L
     private const val USABLE_MS = 3 * 60 * 60_000L
-    private const val DUSTY = 150.0 // µg/m³ of dust in the air
+
+    // WMO weather codes have no dust. Open-Meteo's dust reading is always high over the desert (Riyadh's
+    // median was over 3000 µg/m³ on clear days), so dust is told apart by low visibility instead:
+    // normally about 17 km in Riyadh, below 5 km only a few hours a week.
+    private const val DUSTY_VISIBILITY_M = 5_000.0
 
     fun needsRefresh(weather: WeatherNow?, now: Long): Boolean =
         weather == null || now - weather.fetchedAt > REFRESH_MS
@@ -71,28 +75,18 @@ object WeatherService {
         val json = JSONObject(
             get(
                 "https://api.open-meteo.com/v1/forecast?latitude=${city.lat}&longitude=${city.lon}" +
-                    "&current=temperature_2m,weather_code&timezone=auto",
+                    "&current=temperature_2m,weather_code,visibility&timezone=auto",
             ),
         )
         val current = json.getJSONObject("current")
         var sky = skyFor(current.getInt("weather_code"))
-        if ((sky == Sky.Clear || sky == Sky.PartlyCloudy || sky == Sky.Cloudy) && isDusty(city)) sky = Sky.Dust
+        val visibility = current.optDouble("visibility", Double.NaN)
+        if ((sky == Sky.Clear || sky == Sky.PartlyCloudy || sky == Sky.Cloudy) && visibility < DUSTY_VISIBILITY_M) {
+            sky = Sky.Dust
+        }
         WeatherNow(current.getDouble("temperature_2m"), sky, System.currentTimeMillis())
     } catch (e: Exception) {
         null
-    }
-
-    // WMO weather codes have no dust, so Open-Meteo's air quality (also free, no key) tells dust apart.
-    private fun isDusty(city: City): Boolean = try {
-        val json = JSONObject(
-            get(
-                "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${city.lat}" +
-                    "&longitude=${city.lon}&current=dust",
-            ),
-        )
-        json.getJSONObject("current").optDouble("dust", 0.0) >= DUSTY
-    } catch (e: Exception) {
-        false
     }
 
     private fun skyFor(code: Int): Sky = when (code) {
