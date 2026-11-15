@@ -26,14 +26,14 @@ private class MenuRequest(val app: LaunchableApp, val fromHome: Boolean)
 private class Loaded(val apps: List<LaunchableApp>, val favorites: List<String>, val hidden: Set<String>)
 
 @Composable
-fun LauncherApp(refreshTick: Int) {
+fun LauncherApp(refreshTick: Int, homeTick: Int) {
     MaterialTheme(colorScheme = darkColorScheme()) {
-        Launcher(refreshTick)
+        Launcher(refreshTick, homeTick)
     }
 }
 
 @Composable
-private fun Launcher(refreshTick: Int) {
+private fun Launcher(refreshTick: Int, homeTick: Int) {
     val context = LocalContext.current
     val store = remember { LauncherStore(context.applicationContext) }
     val artCache = remember { ArtCache(context.applicationContext) }
@@ -94,6 +94,16 @@ private fun Launcher(refreshTick: Int) {
     // Only "from the app" needs to know the focused app, so the other backgrounds cause no extra work.
     fun followApp(app: LaunchableApp) {
         if (shownBackground == BackgroundStyle.FromApp) backdropApp = app
+    }
+
+    // The Home button always lands on the home screen, with edit mode and any menu closed (like Apple TV).
+    LaunchedEffect(homeTick) {
+        if (homeTick == 0) return@LaunchedEffect
+        if (moving != null) dropMovingTile()
+        editing = false
+        menu = null
+        previewBackground = null
+        screen = Screen.Home
     }
 
     BackHandler(enabled = true) {

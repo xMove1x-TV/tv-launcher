@@ -15,6 +15,9 @@ class MainActivity : ComponentActivity() {
     /** Bumped whenever the list of apps may have changed; the home screen reloads when it changes. */
     private val refreshTick = mutableIntStateOf(0)
 
+    /** Bumped when the Home button (or the app icon) is pressed while the launcher already exists. */
+    private val homeTick = mutableIntStateOf(0)
+
     // Registered only while the screen is visible: nothing runs in the background.
     private val packageReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context, intent: Intent) {
@@ -24,7 +27,13 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContent { LauncherApp(refreshTick = refreshTick.intValue) }
+        setContent { LauncherApp(refreshTick = refreshTick.intValue, homeTick = homeTick.intValue) }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        homeTick.intValue++
     }
 
     override fun onStart() {
