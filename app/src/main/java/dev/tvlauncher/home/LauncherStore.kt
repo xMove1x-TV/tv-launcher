@@ -22,16 +22,19 @@ class LauncherStore(context: Context) {
 
     /** The last weather fetched, so the background is right at once after a restart, even offline. */
     fun loadWeather(): WeatherNow? {
+        // "temperature|sky|time|city". Older readings without a city are dropped and fetched again.
         val parts = prefs.getString(KEY_WEATHER, null)?.split('|') ?: return null
-        if (parts.size != 3) return null
+        if (parts.size != 4) return null
         val temp = parts[0].toDoubleOrNull() ?: return null
         val sky = Sky.entries.firstOrNull { it.name == parts[1] } ?: return null
         val at = parts[2].toLongOrNull() ?: return null
-        return WeatherNow(temp, sky, at)
+        return WeatherNow(temp, sky, at, parts[3])
     }
 
     fun saveWeather(weather: WeatherNow) {
-        prefs.edit().putString(KEY_WEATHER, "${weather.tempC}|${weather.sky.name}|${weather.fetchedAt}").apply()
+        prefs.edit()
+            .putString(KEY_WEATHER, "${weather.tempC}|${weather.sky.name}|${weather.fetchedAt}|${weather.cityId}")
+            .apply()
     }
 
     fun saveBackground(style: BackgroundStyle) {

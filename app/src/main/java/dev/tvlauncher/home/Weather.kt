@@ -22,11 +22,13 @@ import kotlin.math.tan
 class City(val id: String, val nameAr: String, val nameEn: String, val lat: Double, val lon: Double)
 
 object Cities {
+    val Jeddah = City("jeddah", "جدة", "Jeddah", 21.5433, 39.1728)
     val Riyadh = City("riyadh", "الرياض", "Riyadh", 24.7136, 46.6753)
 
     // Until the city picker arrives (batch 2), the city comes from the TV's time zone.
+    // Asia/Riyadh covers all of Saudi Arabia; the user lives in Jeddah.
     private val byZone = mapOf(
-        "Asia/Riyadh" to Riyadh,
+        "Asia/Riyadh" to Jeddah,
         "Asia/Dubai" to City("dubai", "دبي", "Dubai", 25.2048, 55.2708),
         "Asia/Kuwait" to City("kuwait", "الكويت", "Kuwait City", 29.3759, 47.9774),
         "Asia/Qatar" to City("doha", "الدوحة", "Doha", 25.2854, 51.5310),
@@ -35,15 +37,15 @@ object Cities {
         "Africa/Cairo" to City("cairo", "القاهرة", "Cairo", 30.0444, 31.2357),
     )
 
-    fun default(): City = byZone[TimeZone.getDefault().id] ?: Riyadh
+    fun default(): City = byZone[TimeZone.getDefault().id] ?: Jeddah
 }
 
 enum class Sky { Clear, PartlyCloudy, Cloudy, Rain, Thunder, Dust, Fog }
 
 enum class DayPart { Morning, Afternoon, Sunset, Night }
 
-/** The weather as last fetched from Open-Meteo. */
-class WeatherNow(val tempC: Double, val sky: Sky, val fetchedAt: Long)
+/** The weather as last fetched from Open-Meteo for the city with [cityId]. */
+class WeatherNow(val tempC: Double, val sky: Sky, val fetchedAt: Long, val cityId: String)
 
 /** What the weather background shows: the sky and the time of day. */
 data class WeatherScene(val sky: Sky, val part: DayPart) {
@@ -63,12 +65,13 @@ object WeatherService {
     // normally about 17 km in Riyadh, below 5 km only a few hours a week.
     private const val DUSTY_VISIBILITY_M = 5_000.0
 
-    fun needsRefresh(weather: WeatherNow?, now: Long): Boolean =
-        weather == null || now - weather.fetchedAt > REFRESH_MS
+    /** True when there is no weather yet, it is 30 minutes old, or it belongs to another city. */
+    fun needsRefresh(weather: WeatherNow?, now: Long, city: City): Boolean =
+        weather == null || weather.cityId != city.id || now - weather.fetchedAt > REFRESH_MS
 
-    /** The weather if it is recent enough to show; older data is ignored. */
-    fun usable(weather: WeatherNow?, now: Long): WeatherNow? =
-        weather?.takeIf { now - it.fetchedAt in 0..USABLE_MS }
+    /** The weather if it is for [city] and recent enough to show; anything else is ignored. */
+    fun usable(weather: WeatherNow?, now: Long, city: City): WeatherNow? =
+        weather?.takeIf { it.cityId == city.id && now - it.fetchedAt in 0..USABLE_MS }
 
     /** The current weather, or null when there is no internet. Call it off the main thread. */
     fun fetch(city: City): WeatherNow? = try {
@@ -84,7 +87,7 @@ object WeatherService {
         if ((sky == Sky.Clear || sky == Sky.PartlyCloudy || sky == Sky.Cloudy) && visibility < DUSTY_VISIBILITY_M) {
             sky = Sky.Dust
         }
-        WeatherNow(current.getDouble("temperature_2m"), sky, System.currentTimeMillis())
+        WeatherNow(current.getDouble("temperature_2m"), sky, System.currentTimeMillis(), city.id)
     } catch (e: Exception) {
         null
     }

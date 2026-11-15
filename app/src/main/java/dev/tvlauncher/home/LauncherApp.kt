@@ -67,7 +67,7 @@ private fun Launcher(refreshTick: Int, homeTick: Int, visible: Boolean) {
     val city = remember { Cities.default() }
     var weather by remember { mutableStateOf(store.loadWeather()) }
     val now = rememberNow()
-    val usableWeather = WeatherService.usable(weather, now)
+    val usableWeather = WeatherService.usable(weather, now, city)
     val minuteOfDay = remember(now) {
         Calendar.getInstance().apply { timeInMillis = now }.let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
     }
@@ -81,7 +81,7 @@ private fun Launcher(refreshTick: Int, homeTick: Int, visible: Boolean) {
         var lastTry = 0L
         while (true) {
             val t = System.currentTimeMillis()
-            if (WeatherService.needsRefresh(weather, t) && t - lastTry > 5 * 60_000L) {
+            if (WeatherService.needsRefresh(weather, t, city) && t - lastTry > 5 * 60_000L) {
                 lastTry = t
                 val fresh = withContext(Dispatchers.IO) { WeatherService.fetch(city) }
                 if (fresh != null) {
