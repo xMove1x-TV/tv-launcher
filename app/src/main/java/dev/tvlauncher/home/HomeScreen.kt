@@ -1,8 +1,8 @@
 package dev.tvlauncher.home
 
-import android.util.Log
 import android.view.KeyEvent as NativeKeyEvent
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -41,7 +41,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
@@ -54,11 +56,14 @@ import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.coerceAtMost
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.Text
 
-private const val TAG = "TvLauncher"
 private val TileGap = 24.dp
 private val MaxTileWidth = 196.dp
+
+// Keeps the app name readable over bright backgrounds.
+private val TextShadow = Shadow(color = Color.Black.copy(alpha = 0.5f), offset = Offset(0f, 2f), blurRadius = 8f)
 
 /**
  * The home screen: clock, a big picture of the focused app, and the favorites (one row for up to 6,
@@ -80,7 +85,9 @@ fun HomeScreen(
     onMoveTo: (String, Int) -> Unit,
     onAllApps: () -> Unit,
     onAddApp: () -> Unit,
+    onBackground: () -> Unit,
     onDone: () -> Unit,
+    onHeroApp: (LaunchableApp) -> Unit,
 ) {
     var focusedPackage by remember { mutableStateOf<String?>(null) }
     val requesters = remember { HashMap<String, FocusRequester>() }
@@ -95,18 +102,26 @@ fun HomeScreen(
         },
     )
 
+    val heroApp = favorites.firstOrNull { it.packageName == (moving ?: focusedPackage) } ?: favorites.firstOrNull()
+    // Lets the "from the app" background follow the app in the big area.
+    LaunchedEffect(heroApp?.packageName) {
+        if (heroApp != null) onHeroApp(heroApp)
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         TopBar(
             editing = editing,
             showAdd = canAddMore && moving == null,
+            showBackground = moving == null,
             canOpenInputs = canOpenInputs,
             onAllApps = onAllApps,
             onAddApp = onAddApp,
+            onBackground = onBackground,
             onDone = onDone,
         )
         Hero(
             favorites = favorites,
-            focusedPackage = moving ?: focusedPackage,
+            shownPackage = heroApp?.packageName,
             hint = hint,
             artCache = artCache,
             modifier = Modifier
@@ -121,17 +136,19 @@ fun HomeScreen(
                 fontSize = 20.sp,
                 modifier = Modifier.padding(ScreenPadding),
             )
-            else -> FavoriteGrid(
-                favorites = favorites,
-                artCache = artCache,
-                editing = editing,
-                moving = moving,
-                requesterFor = { requesterFor(it) },
-                onFocused = { focusedPackage = it },
-                onTileClick = onTileClick,
-                onTileLongClick = onTileLongClick,
-                onMoveTo = onMoveTo,
-            )
+            else -> Appear(durationMillis = 320, fromScale = 0.98f) {
+                FavoriteGrid(
+                    favorites = favorites,
+                    artCache = artCache,
+                    editing = editing,
+                    moving = moving,
+                    requesterFor = { requesterFor(it) },
+                    onFocused = { focusedPackage = it },
+                    onTileClick = onTileClick,
+                    onTileLongClick = onTileLongClick,
+                    onMoveTo = onMoveTo,
+                )
+            }
         }
         Spacer(modifier = Modifier.height(32.dp))
     }
@@ -168,9 +185,11 @@ fun HomeScreen(
 private fun TopBar(
     editing: Boolean,
     showAdd: Boolean,
+    showBackground: Boolean,
     canOpenInputs: Boolean,
     onAllApps: () -> Unit,
     onAddApp: () -> Unit,
+    onBackground: () -> Unit,
     onDone: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -185,6 +204,10 @@ private fun TopBar(
         if (editing) {
             if (showAdd) {
                 ShortcutButton(text = stringResource(R.string.add_app), onClick = onAddApp)
+                Spacer(modifier = Modifier.width(12.dp))
+            }
+            if (showBackground) {
+                ShortcutButton(text = stringResource(R.string.background), onClick = onBackground)
                 Spacer(modifier = Modifier.width(12.dp))
             }
             ShortcutButton(text = stringResource(R.string.done), onClick = onDone)
@@ -204,17 +227,15 @@ private fun TopBar(
 @Composable
 private fun Hero(
     favorites: List<LaunchableApp>,
-    focusedPackage: String?,
+    shownPackage: String?,
     hint: String,
     artCache: ArtCache,
     modifier: Modifier,
 ) {
-    val shownPackage = (favorites.firstOrNull { it.packageName == focusedPackage } ?: favorites.firstOrNull())
-        ?.packageName
     Crossfade(
         targetState = shownPackage,
         modifier = modifier,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
         label = "hero",
     ) { pkg ->
         val app = favorites.firstOrNull { it.packageName == pkg }
@@ -260,9 +281,15 @@ private fun HeroContent(app: LaunchableApp, art: Artwork?, hint: String) {
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
+                style = LocalTextStyle.current.copy(shadow = TextShadow),
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Text(text = hint, color = Color.White.copy(alpha = 0.6f), fontSize = 18.sp)
+            Text(
+                text = hint,
+                color = Color.White.copy(alpha = 0.7f),
+                fontSize = 18.sp,
+                style = LocalTextStyle.current.copy(shadow = TextShadow),
+            )
         }
     }
 }
@@ -320,9 +347,8 @@ private fun FavoriteGrid(
                     val native = event.nativeKeyEvent
                     val target = moveTarget(native.keyCode, index, list.size, perRow, rtl)
                         ?: return@onPreviewKeyEvent false
-                    if (native.action == NativeKeyEvent.ACTION_DOWN) {
-                        Log.d(TAG, "move key=${native.keyCode} index=$index target=$target rtl=$rtl")
-                        if (target != index) currentOnMoveTo(movingPkg, target)
+                    if (native.action == NativeKeyEvent.ACTION_DOWN && target != index) {
+                        currentOnMoveTo(movingPkg, target)
                     }
                     true
                 },

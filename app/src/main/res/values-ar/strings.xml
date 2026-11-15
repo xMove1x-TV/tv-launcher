@@ -30,4 +30,17 @@
     <string name="add_title">إضافة إلى المفضلة</string>
     <string name="add_hint">اضغط OK للإضافة · المفضلة %1$d من %2$d</string>
     <string name="no_apps_to_add">لا توجد تطبيقات أخرى للإضافة</string>
+
+    <!-- الخلفية -->
+    <string name="background">الخلفية</string>
+    <string name="background_title">اختر الخلفية</string>
+    <string name="background_hint">اضغط OK للاختيار · رجوع للإلغاء</string>
+    <string name="bg_current">الحالية</string>
+    <string name="bg_night">ليل</string>
+    <string name="bg_aurora">شفق</string>
+    <string name="bg_sunset">غروب</string>
+    <string name="bg_ocean">محيط</string>
+    <string name="bg_forest">غابة</string>
+    <string name="bg_graphite">رمادي</string>
+    <string name="bg_from_app">من التطبيق</string>
 </resources>

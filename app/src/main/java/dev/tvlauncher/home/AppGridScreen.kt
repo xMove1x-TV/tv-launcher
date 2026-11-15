@@ -1,5 +1,8 @@
 package dev.tvlauncher.home
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.gestures.BringIntoViewSpec
+import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +18,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -37,11 +42,22 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Text
 
 private const val GridColumns = 5
+private val GridTopPadding = 24.dp
+
+/**
+ * Scrolls the grid a whole row at a time: the focused row always lines up at the top, so no row is
+ * left half cut under the title. (On the last rows the grid simply stops at its end.)
+ */
+@OptIn(ExperimentalFoundationApi::class)
+private class RowAtTop(private val topPx: Float) : BringIntoViewSpec {
+    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float = offset - topPx
+}
 
 /**
  * A full-screen grid of apps, sorted by name. Used for "All apps" and for picking an app to add to
  * the favorites. Pictures load only for the tiles on screen.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppGridScreen(
     title: String,
@@ -54,9 +70,12 @@ fun AppGridScreen(
     onFocusTargetHandled: () -> Unit,
     onClick: (LaunchableApp) -> Unit,
     onLongClick: ((LaunchableApp) -> Unit)?,
+    onFocusedApp: (LaunchableApp) -> Unit = {},
     headerAction: @Composable () -> Unit = {},
 ) {
     val gridState = rememberLazyGridState()
+    val rowTopPx = with(LocalDensity.current) { GridTopPadding.toPx() }
+    val bringIntoView = remember(rowTopPx) { RowAtTop(rowTopPx) }
     val requesters = remember { HashMap<String, FocusRequester>() }
     fun requesterFor(pkg: String): FocusRequester = requesters.getOrPut(pkg) { FocusRequester() }
     var initialFocusDone by remember { mutableStateOf(false) }
@@ -83,25 +102,28 @@ fun AppGridScreen(
                 modifier = Modifier.padding(ScreenPadding),
             )
         } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(GridColumns),
-                state = gridState,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
-                contentPadding = PaddingValues(horizontal = ScreenPadding, vertical = 24.dp),
-                horizontalArrangement = Arrangement.spacedBy(24.dp),
-                verticalArrangement = Arrangement.spacedBy(28.dp),
-            ) {
-                items(apps, key = { it.packageName }) { app ->
-                    GridItem(
-                        app = app,
-                        art = rememberArtwork(app, artCache),
-                        isHidden = app.packageName in hidden,
-                        requester = requesterFor(app.packageName),
-                        onClick = { onClick(app) },
-                        onLongClick = if (onLongClick != null) ({ onLongClick(app) }) else null,
-                    )
+            CompositionLocalProvider(LocalBringIntoViewSpec provides bringIntoView) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(GridColumns),
+                    state = gridState,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentPadding = PaddingValues(start = ScreenPadding, end = ScreenPadding, top = GridTopPadding, bottom = 24.dp),
+                    horizontalArrangement = Arrangement.spacedBy(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp),
+                ) {
+                    items(apps, key = { it.packageName }) { app ->
+                        GridItem(
+                            app = app,
+                            art = rememberArtwork(app, artCache),
+                            isHidden = app.packageName in hidden,
+                            requester = requesterFor(app.packageName),
+                            onClick = { onClick(app) },
+                            onLongClick = if (onLongClick != null) ({ onLongClick(app) }) else null,
+                            onFocused = { onFocusedApp(app) },
+                        )
+                    }
                 }
             }
         }
@@ -138,6 +160,7 @@ private fun GridItem(
     requester: FocusRequester,
     onClick: () -> Unit,
     onLongClick: (() -> Unit)?,
+    onFocused: () -> Unit,
 ) {
     var focused by remember { mutableStateOf(false) }
     val label = if (isHidden) app.label + " · " + stringResource(R.string.hidden_badge) else app.label
@@ -154,7 +177,11 @@ private fun GridItem(
                 .fillMaxWidth()
                 .aspectRatio(16f / 9f)
                 .focusRequester(requester)
-                .onFocusChanged { focused = it.isFocused || it.hasFocus },
+                .onFocusChanged {
+                    val now = it.isFocused || it.hasFocus
+                    if (now && !focused) onFocused()
+                    focused = now
+                },
         )
         Spacer(modifier = Modifier.height(10.dp))
         Text(

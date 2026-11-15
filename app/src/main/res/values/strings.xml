@@ -30,4 +30,17 @@
     <string name="add_title">Add to favorites</string>
     <string name="add_hint">OK to add · %1$d of %2$d favorites</string>
     <string name="no_apps_to_add">No more apps to add</string>
+
+    <!-- Background -->
+    <string name="background">Background</string>
+    <string name="background_title">Choose a background</string>
+    <string name="background_hint">OK to choose · Back to cancel</string>
+    <string name="bg_current">Current</string>
+    <string name="bg_night">Night</string>
+    <string name="bg_aurora">Aurora</string>
+    <string name="bg_sunset">Sunset</string>
+    <string name="bg_ocean">Ocean</string>
+    <string name="bg_forest">Forest</string>
+    <string name="bg_graphite">Graphite</string>
+    <string name="bg_from_app">From the app</string>
 </resources>

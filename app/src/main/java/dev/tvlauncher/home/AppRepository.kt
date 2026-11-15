@@ -29,12 +29,19 @@ class Artwork(val banner: ImageBitmap?, val icon: ImageBitmap?)
 /** Keeps loaded pictures in memory per app version, so no screen loads the same picture twice. */
 class ArtCache(private val context: Context) {
     private val cache = ConcurrentHashMap<String, Artwork>()
+    private val backdrops = ConcurrentHashMap<String, Backdrop>()
+
+    private class Backdrop(val image: ImageBitmap?)
 
     fun peek(app: LaunchableApp): Artwork? = cache[key(app)]
 
     /** Returns the pictures, loading them if needed. Call it off the main thread. */
     fun load(app: LaunchableApp): Artwork =
         cache.getOrPut(key(app)) { AppRepository.loadArtwork(context, app) }
+
+    /** The app's tiny blurred background (see [Backgrounds.backdrop]). Call it off the main thread. */
+    fun loadBackdrop(app: LaunchableApp): ImageBitmap? =
+        backdrops.getOrPut(key(app)) { Backdrop(runCatching { Backgrounds.backdrop(load(app)) }.getOrNull()) }.image
 
     private fun key(app: LaunchableApp) = app.packageName + ":" + app.updateTime
 }

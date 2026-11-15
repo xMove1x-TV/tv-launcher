@@ -1,10 +1,14 @@
 package dev.tvlauncher.home
 
 import android.view.KeyEvent as NativeKeyEvent
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -28,6 +32,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
@@ -185,6 +190,31 @@ fun ShortcutButton(text: String, onClick: () -> Unit, modifier: Modifier = Modif
             fontSize = 15.sp,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
         )
+    }
+}
+
+/** Fades its content in, with a very slight zoom, when it first appears. */
+@Composable
+fun Appear(
+    modifier: Modifier = Modifier,
+    durationMillis: Int = 240,
+    fromScale: Float = 0.97f,
+    content: @Composable () -> Unit,
+) {
+    val progress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(1f, animationSpec = tween(durationMillis, easing = FastOutSlowInEasing))
+    }
+    Box(
+        modifier = modifier.graphicsLayer {
+            val p = progress.value
+            alpha = p
+            val scale = fromScale + (1f - fromScale) * p
+            scaleX = scale
+            scaleY = scale
+        },
+    ) {
+        content()
     }
 }
 

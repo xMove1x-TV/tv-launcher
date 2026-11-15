@@ -2,13 +2,19 @@ package dev.tvlauncher.home
 
 import android.content.Context
 
-/** Saves the launcher's choices in SharedPreferences: the ordered favorites and the hidden apps. */
+/** Saves the launcher's choices in SharedPreferences: the ordered favorites, the hidden apps and the background. */
 class LauncherStore(context: Context) {
 
     private val prefs = context.getSharedPreferences("launcher", Context.MODE_PRIVATE)
 
     fun saveFavorites(packages: List<String>) {
         prefs.edit().putString(KEY_FAVORITES, packages.joinToString("\n")).apply()
+    }
+
+    fun loadBackground(): BackgroundStyle = BackgroundStyle.fromId(prefs.getString(KEY_BACKGROUND, null))
+
+    fun saveBackground(style: BackgroundStyle) {
+        prefs.edit().putString(KEY_BACKGROUND, style.id).apply()
     }
 
     fun loadHidden(): Set<String> = readList(KEY_HIDDEN)?.toSet().orEmpty()
@@ -41,6 +47,7 @@ class LauncherStore(context: Context) {
     companion object {
         private const val KEY_FAVORITES = "favorites"
         private const val KEY_HIDDEN = "hidden"
+        private const val KEY_BACKGROUND = "background"
         const val MIN = 6
         const val MAX = 12
 
