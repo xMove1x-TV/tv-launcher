@@ -168,7 +168,13 @@ object Backgrounds {
         val pixels = IntArray(BACKDROP_W * BACKDROP_H)
         tiny.getPixels(pixels, 0, BACKDROP_W, 0, 0, BACKDROP_W, BACKDROP_H)
         repeat(2) { boxBlur(pixels, BACKDROP_W, BACKDROP_H, 3) }
-        for (i in pixels.indices) pixels[i] = darken(pixels[i], 0.6f)
+        // Bright pictures (white banners like YouTube or Netflix) are darkened much more than dark ones,
+        // so the white text on top always stays easy to read.
+        var sum = 0f
+        for (c in pixels) sum += luminance(c)
+        val average = sum / pixels.size
+        val factor = minOf(0.6f, 48f / maxOf(average, 1f))
+        for (i in pixels.indices) pixels[i] = darken(pixels[i], factor)
         tiny.setPixels(pixels, 0, BACKDROP_W, 0, 0, BACKDROP_W, BACKDROP_H)
         return tiny.asImageBitmap()
     }
@@ -205,6 +211,9 @@ object Backgrounds {
             }
         }
     }
+
+    private fun luminance(c: Int): Float =
+        0.299f * ((c shr 16) and 0xFF) + 0.587f * ((c shr 8) and 0xFF) + 0.114f * (c and 0xFF)
 
     private fun darken(c: Int, factor: Float): Int {
         val red = (((c shr 16) and 0xFF) * factor).toInt()
