@@ -27,6 +27,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        BootSignals.sendIfNeeded(this)
         setContent { LauncherApp(refreshTick = refreshTick.intValue, homeTick = homeTick.intValue) }
     }
 
