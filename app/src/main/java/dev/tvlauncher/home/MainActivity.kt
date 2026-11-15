@@ -9,6 +9,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 
 class MainActivity : ComponentActivity() {
 
@@ -17,6 +18,9 @@ class MainActivity : ComponentActivity() {
 
     /** Bumped when the Home button (or the app icon) is pressed while the launcher already exists. */
     private val homeTick = mutableIntStateOf(0)
+
+    /** True while the launcher is on screen; the weather only refreshes then. */
+    private val visible = mutableStateOf(false)
 
     // Registered only while the screen is visible: nothing runs in the background.
     private val packageReceiver = object : BroadcastReceiver() {
@@ -28,7 +32,9 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         BootSignals.sendIfNeeded(this)
-        setContent { LauncherApp(refreshTick = refreshTick.intValue, homeTick = homeTick.intValue) }
+        setContent {
+            LauncherApp(refreshTick = refreshTick.intValue, homeTick = homeTick.intValue, visible = visible.value)
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -51,9 +57,11 @@ class MainActivity : ComponentActivity() {
             registerReceiver(packageReceiver, filter)
         }
         refreshTick.intValue++
+        visible.value = true
     }
 
     override fun onStop() {
+        visible.value = false
         unregisterReceiver(packageReceiver)
         super.onStop()
     }

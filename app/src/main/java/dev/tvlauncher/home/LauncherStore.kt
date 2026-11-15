@@ -11,7 +11,28 @@ class LauncherStore(context: Context) {
         prefs.edit().putString(KEY_FAVORITES, packages.joinToString("\n")).apply()
     }
 
-    fun loadBackground(): BackgroundStyle = BackgroundStyle.fromId(prefs.getString(KEY_BACKGROUND, null))
+    fun loadBackground(): BackgroundStyle {
+        // The redesign makes the weather the background once; after that the user's choice is kept.
+        if (!prefs.getBoolean(KEY_REDESIGN_1, false)) {
+            prefs.edit().putBoolean(KEY_REDESIGN_1, true).putString(KEY_BACKGROUND, BackgroundStyle.Weather.id).apply()
+            return BackgroundStyle.Weather
+        }
+        return BackgroundStyle.fromId(prefs.getString(KEY_BACKGROUND, null))
+    }
+
+    /** The last weather fetched, so the background is right at once after a restart, even offline. */
+    fun loadWeather(): WeatherNow? {
+        val parts = prefs.getString(KEY_WEATHER, null)?.split('|') ?: return null
+        if (parts.size != 3) return null
+        val temp = parts[0].toDoubleOrNull() ?: return null
+        val sky = Sky.entries.firstOrNull { it.name == parts[1] } ?: return null
+        val at = parts[2].toLongOrNull() ?: return null
+        return WeatherNow(temp, sky, at)
+    }
+
+    fun saveWeather(weather: WeatherNow) {
+        prefs.edit().putString(KEY_WEATHER, "${weather.tempC}|${weather.sky.name}|${weather.fetchedAt}").apply()
+    }
 
     fun saveBackground(style: BackgroundStyle) {
         prefs.edit().putString(KEY_BACKGROUND, style.id).apply()
@@ -48,6 +69,8 @@ class LauncherStore(context: Context) {
         private const val KEY_FAVORITES = "favorites"
         private const val KEY_HIDDEN = "hidden"
         private const val KEY_BACKGROUND = "background"
+        private const val KEY_REDESIGN_1 = "redesign_1"
+        private const val KEY_WEATHER = "weather"
         const val MIN = 6
         const val MAX = 12
 

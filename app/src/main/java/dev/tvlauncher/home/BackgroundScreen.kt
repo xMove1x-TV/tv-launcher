@@ -54,6 +54,7 @@ fun BackgroundScreen(
     current: BackgroundStyle,
     sampleApp: LaunchableApp?,
     artCache: ArtCache,
+    scene: WeatherScene,
     onPreview: (BackgroundStyle) -> Unit,
     onChoose: (BackgroundStyle) -> Unit,
 ) {
@@ -84,6 +85,7 @@ fun BackgroundScreen(
                             style = style,
                             sampleApp = sampleApp,
                             artCache = artCache,
+                            scene = scene,
                             selected = style == current,
                             modifier = Modifier.focusRequester(requesters.getValue(style)),
                             onFocused = { onPreview(style) },
@@ -109,19 +111,24 @@ private fun PreviewTile(
     style: BackgroundStyle,
     sampleApp: LaunchableApp?,
     artCache: ArtCache,
+    scene: WeatherScene,
     selected: Boolean,
     modifier: Modifier,
     onFocused: () -> Unit,
     onClick: () -> Unit,
 ) {
-    val image by produceState<ImageBitmap?>(initialValue = null, style, sampleApp) {
+    val image by produceState<ImageBitmap?>(initialValue = null, style, sampleApp, scene) {
         value = withContext(Dispatchers.IO) {
             val backdrop = if (style == BackgroundStyle.FromApp && sampleApp != null) {
                 artCache.loadBackdrop(sampleApp)
             } else {
                 null
             }
-            backdrop ?: Backgrounds.preview(if (style == BackgroundStyle.FromApp) BackgroundStyle.Night else style)
+            when {
+                backdrop != null -> backdrop
+                style == BackgroundStyle.Weather -> WeatherScenes.preview(scene)
+                else -> Backgrounds.preview(if (style == BackgroundStyle.FromApp) BackgroundStyle.Night else style)
+            }
         }
     }
     var focused by remember { mutableStateOf(false) }

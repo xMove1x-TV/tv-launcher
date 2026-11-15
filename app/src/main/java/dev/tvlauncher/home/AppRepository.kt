@@ -1,5 +1,6 @@
 package dev.tvlauncher.home
 
+import android.app.ActivityOptions
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
@@ -9,7 +10,10 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
+import android.os.Bundle
 import android.provider.Settings
+import android.view.View
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import java.text.Collator
@@ -91,12 +95,24 @@ object AppRepository {
         return Artwork(banner, icon)
     }
 
-    fun launch(context: Context, packageName: String): Boolean {
+    /** Opens the app. With [source] and [bounds] (the tile on screen) the app grows out of its tile. */
+    fun launch(context: Context, packageName: String, source: View? = null, bounds: Rect? = null): Boolean {
         val pm = context.packageManager
         val intent = pm.getLeanbackLaunchIntentForPackage(packageName)
             ?: pm.getLaunchIntentForPackage(packageName)
             ?: return false
-        return start(context, intent)
+        val options = if (source != null && bounds != null && bounds.width > 0f && bounds.height > 0f) {
+            ActivityOptions.makeScaleUpAnimation(
+                source,
+                bounds.left.toInt(),
+                bounds.top.toInt(),
+                bounds.width.toInt(),
+                bounds.height.toInt(),
+            ).toBundle()
+        } else {
+            null
+        }
+        return start(context, intent, options)
     }
 
     fun openSettings(context: Context): Boolean = start(context, Intent(Settings.ACTION_SETTINGS))
@@ -107,8 +123,8 @@ object AppRepository {
 
     fun openInputs(context: Context): Boolean = start(context, Intent(ACTION_VIEW_INPUTS))
 
-    private fun start(context: Context, intent: Intent): Boolean = try {
-        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    private fun start(context: Context, intent: Intent, options: Bundle? = null): Boolean = try {
+        context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options)
         true
     } catch (e: ActivityNotFoundException) {
         false

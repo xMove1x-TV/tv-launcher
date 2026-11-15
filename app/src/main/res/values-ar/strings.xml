@@ -43,4 +43,9 @@
     <string name="bg_forest">غابة</string>
     <string name="bg_graphite">رمادي</string>
     <string name="bg_from_app">من التطبيق</string>
+    <string name="bg_weather">الطقس</string>
+
+    <!-- أعلى الشاشة -->
+    <string name="good_morning">صباح الخير</string>
+    <string name="good_evening">مساء الخير</string>
 </resources>

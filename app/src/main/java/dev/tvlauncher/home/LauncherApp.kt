@@ -4,19 +4,25 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
+import androidx.tv.material3.LocalTextStyle
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import java.util.Calendar
 
 private enum class Screen { Home, AllApps, AddFavorite, Background }
 
@@ -26,18 +32,66 @@ private class MenuRequest(val app: LaunchableApp, val fromHome: Boolean)
 private class Loaded(val apps: List<LaunchableApp>, val favorites: List<String>, val hidden: Set<String>)
 
 @Composable
-fun LauncherApp(refreshTick: Int, homeTick: Int) {
+fun LauncherApp(refreshTick: Int, homeTick: Int, visible: Boolean) {
     MaterialTheme(colorScheme = darkColorScheme()) {
-        Launcher(refreshTick, homeTick)
+        // Tajawal everywhere.
+        CompositionLocalProvider(LocalTextStyle provides LocalTextStyle.current.copy(fontFamily = Tajawal)) {
+            Launcher(refreshTick, homeTick, visible)
+        }
     }
 }
 
+/** The time now, updated at the start of every minute. */
 @Composable
-private fun Launcher(refreshTick: Int, homeTick: Int) {
+private fun rememberNow(): Long {
+    var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val t = System.currentTimeMillis()
+            delay(60_000L - t % 60_000L + 200L)
+            now = System.currentTimeMillis()
+        }
+    }
+    return now
+}
+
+@Composable
+private fun Launcher(refreshTick: Int, homeTick: Int, visible: Boolean) {
     val context = LocalContext.current
+    val view = LocalView.current
     val store = remember { LauncherStore(context.applicationContext) }
     val artCache = remember { ArtCache(context.applicationContext) }
     val canOpenInputs = remember { AppRepository.canOpenInputs(context) }
+
+    // Weather and time of day.
+    val city = remember { Cities.default() }
+    var weather by remember { mutableStateOf(store.loadWeather()) }
+    val now = rememberNow()
+    val usableWeather = WeatherService.usable(weather, now)
+    val minuteOfDay = remember(now) {
+        Calendar.getInstance().apply { timeInMillis = now }.let { it.get(Calendar.HOUR_OF_DAY) * 60 + it.get(Calendar.MINUTE) }
+    }
+    val sun = remember(now / 3_600_000L) { SunTimes.today(city) }
+    val part = dayPart(minuteOfDay, sun.first, sun.second)
+    val scene = sceneFor(usableWeather, part)
+
+    // Every 30 minutes, and only while the launcher is on screen: nothing runs in the background.
+    LaunchedEffect(visible) {
+        if (!visible) return@LaunchedEffect
+        var lastTry = 0L
+        while (true) {
+            val t = System.currentTimeMillis()
+            if (WeatherService.needsRefresh(weather, t) && t - lastTry > 5 * 60_000L) {
+                lastTry = t
+                val fresh = withContext(Dispatchers.IO) { WeatherService.fetch(city) }
+                if (fresh != null) {
+                    weather = fresh
+                    store.saveWeather(fresh)
+                }
+            }
+            delay(60_000L)
+        }
+    }
 
     var apps by remember { mutableStateOf<List<LaunchableApp>?>(null) }
     var favorites by remember { mutableStateOf<List<String>>(emptyList()) }
@@ -128,6 +182,7 @@ private fun Launcher(refreshTick: Int, homeTick: Int) {
             style = shownBackground,
             app = backdropApp ?: favoriteApps.firstOrNull(),
             artCache = artCache,
+            scene = scene,
         )
         // Each screen fades in softly when it opens.
         key(screen) {
@@ -137,18 +192,22 @@ private fun Launcher(refreshTick: Int, homeTick: Int) {
                         favorites = favoriteApps,
                         loaded = apps != null,
                         artCache = artCache,
+                        now = now,
+                        weather = usableWeather,
+                        night = part == DayPart.Night,
                         editing = editing,
                         moving = moving,
                         canAddMore = favorites.size < LauncherStore.MAX,
                         canOpenInputs = canOpenInputs,
                         focusTarget = homeFocus,
                         onFocusTargetHandled = { homeFocus = null },
-                        onTileClick = { pkg ->
+                        onTileClick = { pkg, bounds ->
                             when {
                                 moving != null -> dropMovingTile()
                                 editing -> openHomeMenu(pkg)
                                 else -> {
-                                    AppRepository.launch(context, pkg)
+                                    // The app opens growing out of its tile.
+                                    AppRepository.launch(context, pkg, view, bounds)
                                 }
                             }
                         },
@@ -229,6 +288,7 @@ private fun Launcher(refreshTick: Int, homeTick: Int) {
                         current = background,
                         sampleApp = backdropApp ?: favoriteApps.firstOrNull(),
                         artCache = artCache,
+                        scene = scene,
                         onPreview = { style ->
                             previewBackground = style
                         },

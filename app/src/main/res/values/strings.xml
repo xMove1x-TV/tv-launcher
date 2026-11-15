@@ -43,4 +43,9 @@
     <string name="bg_forest">Forest</string>
     <string name="bg_graphite">Graphite</string>
     <string name="bg_from_app">From the app</string>
+    <string name="bg_weather">Weather</string>
+
+    <!-- Top area -->
+    <string name="good_morning">Good morning</string>
+    <string name="good_evening">Good evening</string>
 </resources>

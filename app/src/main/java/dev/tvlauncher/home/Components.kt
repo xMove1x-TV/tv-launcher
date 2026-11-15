@@ -28,9 +28,12 @@ import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
@@ -50,7 +53,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 internal val ScreenPadding = 48.dp
-internal val TileShape = RoundedCornerShape(14.dp)
+internal val TileShape = RoundedCornerShape(16.dp)
 private val Accent = Color(0xFF4DA3FF)
 
 private fun isOkKey(keyCode: Int): Boolean =
@@ -79,11 +82,24 @@ fun AppTile(
     onFocused: () -> Unit = {},
 ) {
     val press = remember { PressFlag() }
+    var focused by remember { mutableStateOf(false) }
+    // A light sheen sweeps across the tile once when it gets the focus.
+    val shine = remember { Animatable(-1f) }
+    LaunchedEffect(focused) {
+        if (focused) {
+            shine.snapTo(-0.6f)
+            shine.animateTo(1.6f, animationSpec = tween(durationMillis = 900, easing = FastOutSlowInEasing))
+        }
+    }
     Surface(
         onClick = onClick,
         onLongClick = if (onLongClick != null) ({ press.longPressed = true }) else null,
         modifier = modifier
-            .onFocusChanged { if (it.isFocused || it.hasFocus) onFocused() }
+            .onFocusChanged {
+                val now = it.isFocused || it.hasFocus
+                if (now) onFocused()
+                focused = now
+            }
             .onPreviewKeyEvent { event ->
                 val native = event.nativeKeyEvent
                 when {
@@ -105,19 +121,12 @@ fun AppTile(
                 }
             },
         shape = ClickableSurfaceDefaults.shape(shape = TileShape),
-        scale = ClickableSurfaceDefaults.scale(focusedScale = if (highlight) 1.16f else 1.1f),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = if (highlight) 1.16f else 1.12f),
         glow = ClickableSurfaceDefaults.glow(
-            focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.6f), elevation = 18.dp),
+            focusedGlow = Glow(elevationColor = Color.Black.copy(alpha = 0.7f), elevation = 22.dp),
         ),
         border = ClickableSurfaceDefaults.border(
-            focusedBorder = Border(
-                border = if (highlight) {
-                    BorderStroke(3.dp, Accent)
-                } else {
-                    BorderStroke(2.dp, Color.White.copy(alpha = 0.9f))
-                },
-                shape = TileShape,
-            ),
+            focusedBorder = if (highlight) Border(border = BorderStroke(3.dp, Accent), shape = TileShape) else Border.None,
         ),
         colors = ClickableSurfaceDefaults.colors(
             containerColor = Color(0xFF263241),
@@ -127,6 +136,23 @@ fun AppTile(
         ),
     ) {
         TileContent(app, art)
+        // A soft gloss on the top half plus the sweeping sheen, only while focused.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .drawBehind {
+                    if (!focused) return@drawBehind
+                    drawRect(Brush.verticalGradient(0f to Color.White.copy(alpha = 0.10f), 0.45f to Color.Transparent))
+                    val x = shine.value * size.width
+                    drawRect(
+                        Brush.linearGradient(
+                            colors = listOf(Color.Transparent, Color.White.copy(alpha = 0.20f), Color.Transparent),
+                            start = Offset(x - size.width * 0.35f, 0f),
+                            end = Offset(x + size.width * 0.05f, size.height),
+                        ),
+                    )
+                },
+        )
     }
 }
 

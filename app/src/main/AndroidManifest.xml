@@ -4,6 +4,9 @@
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
 
+    <!-- Only for the weather (Open-Meteo); nothing else in the launcher uses the internet. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <!-- Lets the launcher see other apps' launch activities on newer Android versions too. -->
     <queries>
         <intent>

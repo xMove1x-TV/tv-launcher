@@ -33,6 +33,7 @@ import kotlinx.coroutines.withContext
 
 /** The backgrounds the user can pick. [FromApp] follows the focused app; the others are drawn once. */
 enum class BackgroundStyle(val id: String, val labelRes: Int) {
+    Weather("weather", R.string.bg_weather),
     Night("night", R.string.bg_night),
     Aurora("aurora", R.string.bg_aurora),
     Sunset("sunset", R.string.bg_sunset),
@@ -43,7 +44,7 @@ enum class BackgroundStyle(val id: String, val labelRes: Int) {
     ;
 
     companion object {
-        val Default = Night
+        val Default = Weather
 
         fun fromId(id: String?): BackgroundStyle = BackgroundStyle.entries.firstOrNull { it.id == id } ?: Default
     }
@@ -88,7 +89,7 @@ object Backgrounds {
         val w = width.toFloat()
         val h = height.toFloat()
         when (style) {
-            BackgroundStyle.Night, BackgroundStyle.FromApp -> {
+            BackgroundStyle.Night, BackgroundStyle.FromApp, BackgroundStyle.Weather -> {
                 linear(canvas, w, h, 0xFF1C2A3A, 0xFF0A0E15)
                 blob(canvas, 0.15f * w, 0.10f * h, 0.70f * w, 0xFF2B4A6B, 0.35f)
             }
@@ -231,26 +232,36 @@ private val AppScrim = Brush.verticalGradient(
 )
 
 /**
- * The full-screen background behind every screen. Changes cross-fade softly. With [BackgroundStyle.FromApp]
- * it follows [app], waiting a moment so quick moves along the tiles do not make it flicker.
+ * The full-screen background behind every screen. Changes cross-fade softly.
+ * - [BackgroundStyle.Weather] shows [scene] (the weather and the time of day).
+ * - [BackgroundStyle.FromApp] follows [app], waiting a moment so quick moves along the tiles do not
+ *   make it flicker.
  */
 @Composable
-fun LauncherBackground(style: BackgroundStyle, app: LaunchableApp?, artCache: ArtCache) {
+fun LauncherBackground(style: BackgroundStyle, app: LaunchableApp?, artCache: ArtCache, scene: WeatherScene) {
     var shown by remember { mutableStateOf<ShownBackground?>(null) }
-    val key = if (style == BackgroundStyle.FromApp) "app:" + app?.packageName else style.id
+    val key = when (style) {
+        BackgroundStyle.FromApp -> "app:" + app?.packageName
+        BackgroundStyle.Weather -> "weather:" + scene.id
+        else -> style.id
+    }
     LaunchedEffect(key) {
         if (style == BackgroundStyle.FromApp && shown != null) delay(250)
         shown = withContext(Dispatchers.IO) {
             val backdrop = if (style == BackgroundStyle.FromApp && app != null) artCache.loadBackdrop(app) else null
-            if (backdrop != null) {
-                ShownBackground(backdrop, fromApp = true)
-            } else {
-                val preset = if (style == BackgroundStyle.FromApp) BackgroundStyle.Night else style
-                ShownBackground(Backgrounds.full(preset), fromApp = false)
+            when {
+                backdrop != null -> ShownBackground(backdrop, fromApp = true)
+                style == BackgroundStyle.Weather -> ShownBackground(WeatherScenes.full(scene), fromApp = false)
+                else -> {
+                    val preset = if (style == BackgroundStyle.FromApp) BackgroundStyle.Night else style
+                    ShownBackground(Backgrounds.full(preset), fromApp = false)
+                }
             }
         }
     }
-    Crossfade(targetState = shown, animationSpec = tween(durationMillis = 450), label = "background") { bg ->
+    // The weather changes slowly, so its backgrounds fade slowly; the app's picture follows the focus faster.
+    val fadeMillis = if (style == BackgroundStyle.FromApp) 450 else 900
+    Crossfade(targetState = shown, animationSpec = tween(durationMillis = fadeMillis), label = "background") { bg ->
         if (bg == null) {
             Box(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0E15)))
         } else {
